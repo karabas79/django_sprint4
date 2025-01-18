@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 
 from .constants import NUMBER_POSTS_ON_MAIN
+from .form import PostForm
 from .models import Category, Post
 
 
@@ -21,9 +22,6 @@ def get_filter_posts(author=None, location=None):
 
 
 def index(request):
-    """Фильтруем посты по дате, статусу публикации и категории, к которой
-    принадлежит публикация.
-    """
     post_list = get_filter_posts()[:NUMBER_POSTS_ON_MAIN]
     context = {'post_list': post_list}
     return render(request, 'blog/index.html', context)
@@ -61,3 +59,27 @@ def category_posts(request, category_slug):
         'post_list': post_list
     }
     return render(request, 'blog/category.html', context)
+
+
+# def login_view(request):
+#     return render(request, 'registration/login.html')
+
+
+def create_post(request):
+    form = PostForm(request.POST or None)
+    context = {'form': form}
+    if form.is_valid():
+        form.save()
+    return render(request, 'blog/create.html', context)
+
+
+def post_edit(request, post_id):
+    pass
+
+
+def profile(request, username):
+    pass
+
+
+# def logout_view(request):
+#     return render(request, 'registration/logged_out.html')
