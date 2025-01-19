@@ -1,9 +1,13 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
+from django.urls import reverse
 from django.utils import timezone
 
-from .constants import NUMBER_POSTS_ON_MAIN
+# from .constants import NUMBER_POSTS_ON_MAIN
 from .form import PostForm, RegistrationForm
 from .models import Category, Post
 
@@ -24,8 +28,14 @@ def get_filter_posts(author=None, location=None):
 
 
 def index(request):
-    post = get_filter_posts()[:NUMBER_POSTS_ON_MAIN]
-    context = {'post': post}
+    posts = get_filter_posts().order_by('-pub_date')
+
+    # Пагинация
+    paginator = Paginator(posts, 10)  # 10 публикаций на странице
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    # posts = get_filter_posts()  # [:NUMBER_POSTS_ON_MAIN]
+    context = {'page_obj': page_obj}
     return render(request, 'blog/index.html', context)
 
 
@@ -63,11 +73,14 @@ def category_posts(request, category_slug):
     return render(request, 'blog/category.html', context)
 
 
+@login_required
 def create_post(request):
     form = PostForm(request.POST or None)
     context = {'form': form}
     if form.is_valid():
-        form.save()
+        post = form.save()
+        post.author = request.user
+        post.save()
     return render(request, 'blog/create.html', context)
 
 
@@ -76,9 +89,30 @@ def post_edit(request, post_id):
     pass
 
 
-@login_required
 def profile(request, username):
-    pass
+    profile = get_object_or_404(User, username=username)
+
+    # Получаем публикации пользователя
+    posts = Post.objects.filter(author=profile).order_by('-pub_date')
+
+    # Пагинация
+    paginator = Paginator(posts, 10)  # 10 публикаций на странице
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'profile': profile,
+        'page_obj': page_obj,
+    }
+    return render(request, 'blog/profile.html', context)
+
+
+@login_required
+def edit_profile(request):
+    if request.method == 'POST':
+        # Логика для обработки формы редактирования профиля
+        pass
+    return render(request, 'blog/profile.html')
 
 
 @login_required
@@ -92,3 +126,10 @@ def register_view(request):
     else:
         form = RegistrationForm()
     return render(request, 'registration/register.html', {'form': form})
+
+
+@login_required
+def profile_redirect(request):
+    return HttpResponseRedirect(
+        reverse('blog:profile', args=[request.user.username])
+    )

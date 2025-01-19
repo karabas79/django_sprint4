@@ -45,6 +45,7 @@ class Location(PublishedModel, CreatedModel):
 class Post(PublishedModel, CreatedModel):
     title = models.CharField('Название', max_length=256)
     text = models.TextField('Текст')
+    image = models.ImageField('Фото', upload_to='blog_images', blank=True)
     pub_date = models.DateTimeField(
         'Дата и время публикации',
         help_text=(

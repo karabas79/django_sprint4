@@ -8,7 +8,13 @@ SECRET_KEY = 'django-insecure-$k59#w@vrr@9sw%jx=90y)ax!%vq8@r+ybwh$)e7@ht$sbf+37
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    # Когда проект будет опубликован и станет доступен для пользователей,
+    # в этот список нужно будет добавить и адреса домена, где он будет размещён,
+    # например 'acme.not' и 'www.acme.not'
+] 
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -101,4 +107,8 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-# LOGIN_REDIRECT_URL = 'blog:index'
+LOGIN_REDIRECT_URL = 'blog:profile_redirect'
+
+CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'
+
+MEDIA_ROOT = BASE_DIR / 'media'
