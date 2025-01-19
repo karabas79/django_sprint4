@@ -61,27 +61,29 @@ def category_posts(request, category_slug):
     author = request.GET.get('author')
     location = request.GET.get('location')
 
-    post_list = get_filter_posts(
+    page_obj = get_filter_posts(
         author=author,
         location=location
     ).filter(category=category)
 
     context = {
         'category': category_slug,
-        'post_list': post_list
+        'page_obj': page_obj
     }
     return render(request, 'blog/category.html', context)
 
 
 @login_required
 def create_post(request):
-    form = PostForm(request.POST or None)
-    context = {'form': form}
-    if form.is_valid():
-        post = form.save()
-        post.author = request.user
-        post.save()
-    return render(request, 'blog/create.html', context)
+    form = PostForm()
+    if request.method == 'POST':
+        form = PostForm(request.POST)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            return redirect('blog:profile', username=request.user.username)
+    return render(request, 'blog/create.html', {'form': form})
 
 
 @login_required
