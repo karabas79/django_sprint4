@@ -9,8 +9,8 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 
-# from .constants import NUMBER_POSTS_ON_MAIN
-from .form import PostForm, RegistrationForm, CommentForm, StaticPageForm  
+from .constants import NUMBER_POSTS
+from .form import PostForm, RegistrationForm, CommentForm, StaticPageForm
 from .models import Category, Post, Comment, StaticPage
 
 
@@ -34,8 +34,7 @@ def get_filter_posts(author=None, location=None):
 def index(request):
     posts = get_filter_posts().order_by('-pub_date')
 
-    # Пагинация
-    paginator = Paginator(posts, 10)  # 10 публикаций на странице
+    paginator = Paginator(posts, NUMBER_POSTS)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     context = {'page_obj': page_obj}
@@ -50,8 +49,8 @@ def post_detail(request, post_id):
         get_filter_posts(),
         id=post_id,
     )
-    comments = post.comment.all()  # Получаем все комментарии к посту
-    form = CommentForm()  # Создаем экземпляр формы
+    comments = post.comment.all()
+    form = CommentForm()
     return render(request, 'blog/detail.html', {
         'post': post,
         'comments': comments,
@@ -60,7 +59,7 @@ def post_detail(request, post_id):
 
 
 def category_posts(request, category_slug):
-    category = get_object_or_404(  # Получаем категорию по slug
+    category = get_object_or_404(
         Category,
         slug=category_slug,
         is_published=True
@@ -99,7 +98,6 @@ def create_post(request):
 def edit_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
-    # Проверяем, является ли текущий пользователь автором поста
     if post.author != request.user:
         return redirect('blog:post_detail', post_id=post.id)
 
@@ -118,7 +116,6 @@ def edit_post(request, post_id):
 def delete_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
-    # Проверяем, является ли текущий пользователь автором поста
     if post.author == request.user:
         post.delete()
         return redirect('blog:profile', username=request.user.username)
@@ -128,12 +125,10 @@ def delete_post(request, post_id):
 
 def profile(request, username):
     user_profile = get_object_or_404(User, username=username)
-    # Получаем публикации пользователя
     posts = Post.objects.filter(author=user_profile).annotate(
         comment_count=Count('comment')
     ).order_by('-pub_date')
-    # Пагинация
-    paginator = Paginator(posts, 10)  # 10 публикаций на странице
+    paginator = Paginator(posts, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     context = {
@@ -145,17 +140,21 @@ def profile(request, username):
 
 @login_required
 def edit_profile(request):
-    user = request.user  # Получаем текущего пользователя
+    user = request.user
 
     if request.method == 'POST':
         form = RegistrationForm(request.POST, instance=user)
         if form.is_valid():
-            form.save()  # Сохраняем изменения
-            return redirect('blog:profile', username=user.username)  # Перенаправляем на страницу профиля
+            form.save()
+            return redirect('blog:profile', username=user.username)
     else:
-        form = RegistrationForm(instance=user)  # Заполняем форму существующими данными
+        form = RegistrationForm(instance=user)
 
-    return render(request, 'registration/registration_form.html', {'form': form})
+    return render(
+        request,
+        'registration/registration_form.html',
+        {'form': form}
+    )
 
 
 @login_required
@@ -164,27 +163,30 @@ def register_view(request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # Вход пользователя после регистрации
+            login(request, user)
             return redirect('blog:profile', username=user.username)
     else:
         form = RegistrationForm()
-    return render(request, 'registration/registration_form.html', {'form': form})
+    return render(
+        request,
+        'registration/registration_form.html',
+        {'form': form}
+    )
 
 
 def add_comment(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
     if request.method == 'POST':
-        form = CommentForm(request.POST)  # Создаем форму с данными из POST
+        form = CommentForm(request.POST)
         if form.is_valid():
-            # Создаем новый комментарий
-            comment = form.save(commit=False)  # Не сохраняем сразу
-            comment.post = post  # Устанавливаем пост
-            comment.author = request.user  # Устанавливаем автора
-            comment.save()  # Сохраняем комментарий
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            comment.save()
             return redirect('blog:post_detail', post_id=post.id)
     else:
-        form = CommentForm()  # Создаем пустую форму для GET-запроса
+        form = CommentForm()
 
     return render(request, 'blog/comment.html', {'post': post, 'form': form})
 
@@ -192,14 +194,13 @@ def add_comment(request, post_id):
 def edit_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
 
-    # Проверяем, является ли текущий пользователь автором комментария
     if comment.author != request.user:
         return redirect('blog:post_detail', post_id=comment.post.id)
 
     if request.method == 'POST':
         form = CommentForm(request.POST, instance=comment)
         if form.is_valid():
-            form.save()  # Сохраняем изменения
+            form.save()
             return redirect('blog:post_detail', post_id=comment.post.id)
     else:
         form = CommentForm(instance=comment)
@@ -232,21 +233,21 @@ def confirm_create_post(email):
 
 
 class StaticPageListView(ListView):
-    '''Шаблон для списка страниц'''
+    """Шаблон для списка страниц"""
 
     model = StaticPage
     template_name = 'static_pages/static_page_list.html'
 
 
 class StaticPageDetailView(DetailView):
-    '''Шаблон для отображения страницы'''
+    """Шаблон для отображения страницы"""
 
     model = StaticPage
     template_name = 'static_pages/static_page_detail.html'
 
 
 class StaticPageCreateView(CreateView):
-    '''Перенаправление после успешного создания'''
+    """Перенаправление после успешного создания"""
 
     model = StaticPage
     form_class = StaticPageForm
@@ -255,7 +256,7 @@ class StaticPageCreateView(CreateView):
 
 
 class StaticPageUpdateView(UpdateView):
-    '''Перенаправление после успешного обновления'''
+    """Перенаправление после успешного обновления"""
 
     model = StaticPage
     form_class = StaticPageForm
