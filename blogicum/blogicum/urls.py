@@ -10,7 +10,6 @@ handler404 = 'pages.views.page_not_found'
 handler500 = 'pages.views.error_view'
 
 urlpatterns = [
-    path('pages/', include('pages.urls', namespace='pages')),
     path('admin/', admin.site.urls),
     path('auth/', include('django.contrib.auth.urls')),
     path(
@@ -22,6 +21,7 @@ urlpatterns = [
         ),
         name='registration',
     ),
+    path('pages/', include('pages.urls', namespace='pages')),
     path('', include('blog.urls', namespace='blog')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

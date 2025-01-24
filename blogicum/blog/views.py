@@ -1,16 +1,17 @@
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.http import HttpResponseRedirect
+from django.views.generic import CreateView, UpdateView, ListView, DetailView
 from django.shortcuts import get_object_or_404, render, redirect
-from django.urls import reverse
+from django.urls import reverse_lazy
 from django.utils import timezone
 
 # from .constants import NUMBER_POSTS_ON_MAIN
-from .form import PostForm, RegistrationForm, CommentForm
-from .models import Category, Post, Comment
+from .form import PostForm, RegistrationForm, CommentForm, StaticPageForm  
+from .models import Category, Post, Comment, StaticPage
 
 
 def get_filter_posts(author=None, location=None):
@@ -82,16 +83,16 @@ def category_posts(request, category_slug):
 
 @login_required
 def create_post(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    form = PostForm(request.POST or None)
+    form = PostForm()
+    if request.method == 'POST':
+        form = PostForm(request.POST, request.FILES)
     if form.is_valid():
         post = form.save(commit=False)
         post.author = request.user
         post.save()
+        confirm_create_post(request.user.email)
         return redirect('blog:profile', username=request.user.username)
-    else:
-        return render(request, 'blog/create.html', {'form': form})
+    return render(request, 'blog/create.html', {'form': form})
 
 
 @login_required
@@ -126,20 +127,17 @@ def delete_post(request, post_id):
 
 
 def profile(request, username):
-    profile = get_object_or_404(User, username=username)
-
+    user_profile = get_object_or_404(User, username=username)
     # Получаем публикации пользователя
-    posts = Post.objects.filter(author=profile).annotate(
+    posts = Post.objects.filter(author=user_profile).annotate(
         comment_count=Count('comment')
     ).order_by('-pub_date')
-
     # Пагинация
     paginator = Paginator(posts, 10)  # 10 публикаций на странице
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
     context = {
-        'profile': profile,
+        'profile': user_profile,
         'page_obj': page_obj,
     }
     return render(request, 'blog/profile.html', context)
@@ -157,7 +155,7 @@ def edit_profile(request):
     else:
         form = RegistrationForm(instance=user)  # Заполняем форму существующими данными
 
-    return render(request, 'blog/edit_profile.html', {'form': form})
+    return render(request, 'registration/registration_form.html', {'form': form})
 
 
 @login_required
@@ -170,14 +168,7 @@ def register_view(request):
             return redirect('blog:profile', username=user.username)
     else:
         form = RegistrationForm()
-    return render(request, 'registration/register.html', {'form': form})
-
-
-@login_required
-def profile_redirect(request):
-    return HttpResponseRedirect(
-        reverse('blog:profile', args=[request.user.username])
-    )
+    return render(request, 'registration/registration_form.html', {'form': form})
 
 
 def add_comment(request, post_id):
@@ -228,3 +219,45 @@ def delete_comment(request, comment_id):
         return redirect('blog:post_detail', post_id=post_id)
     else:
         return redirect('blog:post_detail', post_id=comment.post.id)
+
+
+def confirm_create_post(email):
+    send_mail(
+        subject='Hello!',
+        message='Thanks for posting!',
+        from_email='confirm_form@blogicum.ru',
+        recipient_list=[email],
+        fail_silently=True,
+    )
+
+
+class StaticPageListView(ListView):
+    '''Шаблон для списка страниц'''
+
+    model = StaticPage
+    template_name = 'static_pages/static_page_list.html'
+
+
+class StaticPageDetailView(DetailView):
+    '''Шаблон для отображения страницы'''
+
+    model = StaticPage
+    template_name = 'static_pages/static_page_detail.html'
+
+
+class StaticPageCreateView(CreateView):
+    '''Перенаправление после успешного создания'''
+
+    model = StaticPage
+    form_class = StaticPageForm
+    template_name = 'static_pages/static_page_form.html'
+    success_url = reverse_lazy('static_page_list')
+
+
+class StaticPageUpdateView(UpdateView):
+    '''Перенаправление после успешного обновления'''
+
+    model = StaticPage
+    form_class = StaticPageForm
+    template_name = 'static_pages/static_page_form.html'
+    success_url = reverse_lazy('static_page_list')

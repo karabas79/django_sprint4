@@ -98,7 +98,6 @@ STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static_blog"),
-    # BASE_DIR / 'static_blog',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -107,8 +106,12 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-LOGIN_REDIRECT_URL = 'blog:profile_redirect'
-
 CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'
 
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
+
 MEDIA_ROOT = BASE_DIR / 'media'
+
+LOGIN_REDIRECT_URL = 'blog:index'

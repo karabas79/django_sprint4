@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 # from django.contrib.auth import get_user_model
 
-from .models import Post, Comment
+from .models import Post, Comment, StaticPage
 
 
 class PostForm(forms.ModelForm):
@@ -32,3 +32,9 @@ class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ['text']
+
+
+class StaticPageForm(forms.ModelForm):
+    class Meta:
+        model = StaticPage
+        fields = ['title', 'slug', 'content']
