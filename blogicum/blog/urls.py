@@ -1,12 +1,6 @@
 from django.urls import path
 
 from . import views
-from .views import (
-    StaticPageListView,
-    StaticPageDetailView,
-    StaticPageCreateView,
-    StaticPageUpdateView
-)
 
 app_name = 'blog'
 
@@ -35,24 +29,5 @@ urlpatterns = [
     ),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('profile/<str:username>/', views.profile, name='profile'),
-    path(
-        'static-pages/',
-        StaticPageListView.as_view(),
-        name='static_page_list'
-    ),
-    path(
-        'static-pages/<slug:slug>/',
-        StaticPageDetailView.as_view(),
-        name='static_page_detail'
-    ),
-    path(
-        'static-pages/create/',
-        StaticPageCreateView.as_view(),
-        name='static_page_create'
-    ),
-    path(
-        'static-pages/<slug:slug>/edit/',
-        StaticPageUpdateView.as_view(),
-        name='static_page_edit'
-    ),
+
 ]
