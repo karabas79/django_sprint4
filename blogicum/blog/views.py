@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Count
+from django.http import Http404
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -13,13 +14,16 @@ from .form import PostForm, RegistrationForm, CommentForm
 from .models import Category, Post, Comment
 
 
-def get_filter_posts(author=None, location=None):
+def get_filter_posts(author=None, location=None, unpublished=False):
     """Фильтруем посты по дате, статусу публикации и категории."""
     filters = {
         'pub_date__lte': timezone.now(),
         'is_published': True,
         'category__is_published': True
     }
+
+    if unpublished:
+        filters.pop('is_published')
 
     if author:
         filters['author'] = author
@@ -41,19 +45,28 @@ def index(request):
 
 
 def post_detail(request, post_id):
-    """Фильтруем посты по дате ИЛИ статусу публикации ИЛИ категории, к которой
-    принадлежит публикация.
-    """
-    post = get_object_or_404(
-        get_filter_posts(),
-        id=post_id,
-    )
+
+    post = get_object_or_404(Post, id=post_id)
+
+    is_author = post.author == request.user
+
+    if not post.is_published:
+        if not is_author:
+            raise Http404("Пост не найден или еще не опубликован.")
+
+    if not post.category.is_published and not is_author:
+        raise Http404("Пост не найден или снят с публикации.")
+
+    if post.pub_date > timezone.now() and not is_author:
+        raise Http404("Пост не найден или еще не опубликован.")
+
     comments = post.comment.all().order_by('created_at')
     form = CommentForm()
     return render(request, 'blog/detail.html', {
         'post': post,
         'comments': comments,
         'form': form,
+        'pub_date': post.pub_date,
     })
 
 
@@ -64,13 +77,7 @@ def category_posts(request, category_slug):
         is_published=True
     )
 
-    author = request.GET.get('author')
-    location = request.GET.get('location')
-
-    posts = get_filter_posts(
-        author=author,
-        location=location
-    ).filter(category=category).order_by('-pub_date')
+    posts = get_filter_posts().filter(category=category).order_by('-pub_date')
 
     paginator = Paginator(posts, NUMBER_POSTS)
     page_number = request.GET.get('page')
@@ -83,21 +90,25 @@ def category_posts(request, category_slug):
     return render(request, 'blog/category.html', context)
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def create_post(request):
-    form = PostForm()
+
     if request.method == 'POST':
         form = PostForm(request.POST, request.FILES)
-    if form.is_valid():
-        post = form.save(commit=False)
-        post.author = request.user
-        post.save()
-        confirm_create_post(request.user.email)
-        return redirect('blog:profile', username=request.user.username)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.is_published = post.pub_date <= timezone.now()
+            post.save()
+            confirm_create_post(request.user.email)
+            return redirect('blog:profile', username=request.user.username)
+    else:
+        form = PostForm()
+
     return render(request, 'blog/create.html', {'form': form})
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def edit_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
@@ -110,6 +121,7 @@ def edit_post(request, post_id):
     if request.method == 'POST':
         form = PostForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
+            post.is_published = post.pub_date <= timezone.now()
             form.save()
             return redirect(reverse(
                 'blog:post_detail',
@@ -121,18 +133,19 @@ def edit_post(request, post_id):
     return render(request, 'blog/create.html', {'form': form, 'post': post})
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def delete_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
     if post.author == request.user:
         post.delete()
-        return redirect('blog:index', username=request.user.username)
+        return redirect('blog:index')
     else:
         return redirect('blog:post_detail', post_id=post.id)
 
 
 def profile(request, username):
+    print(f"Requested username: {username}")
     user_profile = get_object_or_404(User, username=username)
     posts = Post.objects.filter(author=user_profile).annotate(
         comment_count=Count('comment')
@@ -143,13 +156,16 @@ def profile(request, username):
     context = {
         'profile': user_profile,
         'page_obj': page_obj,
+        'post_count': posts.count()
     }
+
     return render(request, 'blog/profile.html', context)
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def edit_profile(request):
     user = request.user
+    print(f"Requested user: {user}")
 
     if request.method == 'POST':
         form = RegistrationForm(request.POST, instance=user)
@@ -166,7 +182,7 @@ def edit_profile(request):
     )
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def add_comment(request, post_id):
     post = get_object_or_404(Post, id=post_id)
 
@@ -184,7 +200,7 @@ def add_comment(request, post_id):
     return render(request, 'blog/comment.html', {'post': post, 'form': form})
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def edit_comment(request, post_id, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
 
@@ -198,7 +214,7 @@ def edit_comment(request, post_id, comment_id):
         form = CommentForm(request.POST, instance=comment)
         if form.is_valid():
             form.save()
-            return redirect('blog:post_detail', post_id=comment.post.pk)
+            return redirect('blog:post_detail', post_id=post_id)
 
     return render(
         request, 'blog/comment.html',
@@ -206,29 +222,26 @@ def edit_comment(request, post_id, comment_id):
     )
 
 
-@login_required(login_url='/login/')
+@login_required(login_url='/auth/login/')
 def delete_comment(request, post_id, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
-    # form = CommentForm(request.POST, instance=comment)
-    # context = {'form': CommentForm()}
 
-    if comment.author == request.user:
-        if request.method == 'GET':
-            comment.delete()
-            return redirect('blog:index')
-    else:
+    if comment.author != request.user:
         raise PermissionDenied(
             "У вас нет прав для удаления данного комментария."
         )
 
-    return redirect('blog:post_detail', post_id=post_id)
-    # return render(request, 'blog/comment.html', context)
+    if request.method == 'POST':
+        comment.delete()
+        return redirect('blog:post_detail', post_id=post_id)
+
+    return render(request, 'blog/comment.html', {'comment': comment})
 
 
 def confirm_create_post(email):
     send_mail(
-        subject='Hello!',
-        message='Thanks for posting!',
+        subject='Привет!',
+        message='Спасибо, что разместил у нас свой пост!',
         from_email='confirm_form@blogicum.ru',
         recipient_list=[email],
         fail_silently=True,

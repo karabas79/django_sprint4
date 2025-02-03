@@ -1,7 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+
 
 from .models import Post, Comment
 
@@ -19,12 +19,29 @@ class PostForm(forms.ModelForm):
         }
 
 
-class RegistrationForm(UserCreationForm):
-    email = forms.EmailField(required=True)
+class RegistrationForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ('first_name', 'last_name', 'username', 'email')
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.exclude(pk=self.instance.pk).filter(
+            username=username
+        ).exists():
+            raise forms.ValidationError("Это имя пользователя уже занято.")
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.exclude(pk=self.instance.pk).filter(
+            email=email
+        ).exists():
+            raise forms.ValidationError(
+                "Этот адрес электронной почты уже занят."
+            )
+        return email
 
 
 class CommentForm(forms.ModelForm):
@@ -44,7 +61,7 @@ class CommentForm(forms.ModelForm):
         text = self.cleaned_data.get('text')
         if not text:
             raise ValidationError('Комментарий не может быть пустым.')
-        if len(text) > 500:  # Пример ограничения длины
+        if len(text) > 500:
             raise ValidationError(
                 'Комментарий не может превышать 500 символов.'
             )

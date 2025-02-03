@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.utils import timezone
 
 from .constants import NUMBER_CHARACTERS
 from core.models import CreatedModel, PublishedModel
@@ -84,6 +85,12 @@ class Post(PublishedModel, CreatedModel):
 
     def __str__(self):
         return self.title[:NUMBER_CHARACTERS]
+
+    def is_visible(self):
+        """Проверяет, доступен ли пост для просмотра."""
+        return self.is_published or (
+            self.publish_date and self.publish_date <= timezone.now()
+        )
 
 
 class Comment(models.Model):
