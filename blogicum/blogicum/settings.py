@@ -111,6 +111,10 @@ EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 
+MEDIA_URL = '/media/'
+
 LOGIN_REDIRECT_URL = 'blog:index'
 
-LOGIN_URL = '/login/'
+LOGIN_URL = 'login'
+
+EMAIL_BLOGICUM = 'confirm_form@blogicum.ru'

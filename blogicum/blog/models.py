@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 from .constants import NUMBER_CHARACTERS
@@ -49,6 +50,7 @@ class Post(PublishedModel, CreatedModel):
     image = models.ImageField('Фото', upload_to='blog_images', blank=True)
     pub_date = models.DateTimeField(
         'Дата и время публикации',
+        default=timezone.now,
         help_text=(
             'Если установить дату и время в будущем — можно делать '
             'отложенные публикации.'
@@ -92,19 +94,35 @@ class Post(PublishedModel, CreatedModel):
             self.publish_date and self.publish_date <= timezone.now()
         )
 
+    def get_absolute_url(self):
+        """Возвращает канонический URL для просмотра поста."""
+        return reverse('blog:post_detail', kwargs={'post_id': self.id})
 
-class Comment(models.Model):
+
+class Comment(PublishedModel, CreatedModel):
     text = models.TextField('Комментарии')
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
-        related_name='comment',
+        related_name='comments',
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
 
     class Meta:
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'Комментарии'
         ordering = ('created_at',)
+
+    def __str__(self):
+        return (
+            f'Комментарий от {self.author.username} '
+            f'к посту "{self.post.title}"'
+        )
 
 
 class StaticPage(models.Model):
