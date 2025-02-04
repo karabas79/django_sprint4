@@ -36,4 +36,5 @@ def get_filter_posts(
 
 
 def paginate_func(request, queryset, items_per_page):
-    return Paginator(queryset, items_per_page).get_page(request.GET.get('page'))
+    return Paginator(queryset, items_per_page).get_page(
+        request.GET.get('page'))
