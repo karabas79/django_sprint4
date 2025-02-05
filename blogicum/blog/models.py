@@ -55,7 +55,7 @@ class Post(PublishedModel, CreatedModel):
             'отложенные публикации.'
         )
     )
-    description = models.TextField('Описание')
+    description = models.TextField('Описание', blank=True)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
