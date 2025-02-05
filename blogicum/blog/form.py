@@ -1,7 +1,6 @@
 from blog.models import Comment, Post
 from django import forms
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 
 
 class PostForm(forms.ModelForm):
