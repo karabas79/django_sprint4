@@ -1,19 +1,17 @@
 
-from django.core.exceptions import PermissionDenied
-from django.core.mail import send_mail
-from django.http import Http404
-from django.utils import timezone
-
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.db.models import Count
-from django.shortcuts import get_object_or_404, render, redirect
-
 from blog.constants import NUMBER_POSTS
 from blog.form import CommentForm, PostForm, RegistrationForm
 from blog.models import Category, Comment, Post
-from blog.service import get_filter_posts, paginate_func
+from blog.service import get_filter_posts, get_sorted_queryset, paginate_func
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
+from django.db.models import Count
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 
 def index(request):
@@ -28,13 +26,12 @@ def post_detail(request, post_id):
 
     post = get_object_or_404(Post, id=post_id)
 
-    if not post.is_published and post.author != request.user:
-        raise Http404("Пост не найден.")
-
-    if not post.category.is_published and post.author != request.user:
-        raise Http404("Пост не найден.")
-
-    if post.pub_date > timezone.now() and post.author != request.user:
+    if (
+        not (post.is_published
+             and post.category.is_published
+             and post.pub_date <= timezone.now())
+        and post.author != request.user
+    ):
         raise Http404("Пост не найден.")
 
     comments = post.comments.all().order_by('created_at')
@@ -53,7 +50,7 @@ def category_posts(request, category_slug):
         is_published=True
     )
 
-    posts = get_filter_posts().filter(category=category).order_by('-pub_date')
+    posts = get_filter_posts(category=category)
 
     page_obj = paginate_func(request, posts, NUMBER_POSTS)
 
@@ -96,12 +93,14 @@ def edit_post(request, post_id):
 @login_required(login_url='login')
 def delete_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    form = PostForm(request.POST or None, request.FILES or None, instance=post)
+    form = PostForm(instance=post)
+
+    if post.author != request.user:
+        raise Http404("У вас нет прав для удаления этого поста.")
 
     if request.method == 'POST':
-        if post.author == request.user:
-            post.delete()
-            return redirect('blog:index')
+        post.delete()
+        return redirect('blog:index')
 
     return render(
         request,
@@ -112,18 +111,12 @@ def delete_post(request, post_id):
 
 def profile(request, username):
     user_profile = get_object_or_404(User, username=username)
-    if request.user == user_profile:
-        posts = user_profile.posts.annotate(
-            comment_count=Count('comments')
-        ).order_by('-pub_date')
-    else:
-        posts = user_profile.posts.filter(
-            is_published=True,
-            pub_date__lte=timezone.now()
-        ).annotate(
-            comment_count=Count('comments')
-        ).order_by('-pub_date')
+    not_user = request.user != user_profile
+
+    posts = get_sorted_queryset(user_profile, not_user)
+
     page_obj = paginate_func(request, posts, NUMBER_POSTS)
+
     context = {
         'profile': user_profile,
         'page_obj': page_obj,

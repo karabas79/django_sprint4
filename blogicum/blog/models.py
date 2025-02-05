@@ -1,10 +1,9 @@
+from blog.constants import NUMBER_CHARACTERS
+from core.models import CreatedModel, PublishedModel
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-
-from .constants import NUMBER_CHARACTERS
-from core.models import CreatedModel, PublishedModel
 
 User = get_user_model()
 
@@ -120,8 +119,9 @@ class Comment(PublishedModel, CreatedModel):
 
     def __str__(self):
         return (
-            f'Комментарий от {self.author.username} '
-            f'к посту "{self.post.title}"'
+            f'Комментарий автора {self.author.username} '
+            f'к посту "{self.post}, '
+            f'текст: "{self.text[:NUMBER_CHARACTERS]}..."'
         )
 
 

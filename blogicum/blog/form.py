@@ -1,15 +1,14 @@
+from blog.models import Comment, Post
 from django import forms
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-
-from .models import Comment, Post
 
 
 class PostForm(forms.ModelForm):
 
     class Meta:
         model = Post
-        exclude = ['is_published', 'description', 'author']
+        exclude = ['author']
         widgets = {
             'pub_date': forms.DateTimeInput(
                 format='%Y-%m-%dT%H:%M',
@@ -55,9 +54,3 @@ class CommentForm(forms.ModelForm):
                 'placeholder':
                 'Введите ваш комментарий'}),
         }
-
-    def clean_text(self):
-        text = self.cleaned_data.get('text')
-        if not text:
-            raise ValidationError('Комментарий не может быть пустым.')
-        return text
