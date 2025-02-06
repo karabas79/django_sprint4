@@ -1,4 +1,3 @@
-# Standard Library
 from typing import TypeVar, Union
 
 from adapters.post import PostModelAdapter

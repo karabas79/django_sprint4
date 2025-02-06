@@ -1,5 +1,0 @@
-[tool.isort]
-line_length = 79
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-known_third_party = ["djangorestframework", "flask"]  # Добавьте другие сторонние библиотеки, если нужно
-known_first_party = ["blog"]  # Укажите ваш проект или модули

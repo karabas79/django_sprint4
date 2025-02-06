@@ -1,4 +1,3 @@
-# Standard Library
 from typing import Dict, List, Optional, Sequence
 
 from bs4 import BeautifulSoup

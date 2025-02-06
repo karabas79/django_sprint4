@@ -1,4 +1,3 @@
-# Standard Library
 from io import BytesIO
 from typing import Dict, Type
 
