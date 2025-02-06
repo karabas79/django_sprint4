@@ -1,14 +1,16 @@
-from blog.models import Post
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.utils import timezone
+
+from blog.models import Post
 
 
 def get_filter_posts(
         author=None,
         location=None,
         category=None,
-        unpublished=False):
+        unpublished=False,
+        include_unpublished=True):
     """Фильтруем посты по дате, статусу публикации и категории."""
     filters = {
         'pub_date__lte': timezone.now(),
@@ -18,6 +20,9 @@ def get_filter_posts(
 
     if unpublished:
         filters.pop('is_published')
+
+    if not include_unpublished:
+        filters['is_published'] = True
 
     if author:
         filters['author'] = author
@@ -38,15 +43,3 @@ def get_filter_posts(
 def paginate_func(request, queryset, items_per_page):
     return Paginator(queryset, items_per_page).get_page(
         request.GET.get('page'))
-
-
-def get_sorted_queryset(user_profile, not_user=False):
-    """Возвращает отсортированный queryset постов пользователя."""
-    posts = user_profile.posts.annotate(
-        comment_count=Count('comments')
-    ).order_by('-pub_date')
-
-    if not_user:
-        posts = posts.filter(is_published=True, pub_date__lte=timezone.now())
-
-    return posts

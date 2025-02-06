@@ -1,8 +1,3 @@
-
-from blog.constants import NUMBER_POSTS
-from blog.form import CommentForm, PostForm, RegistrationForm
-from blog.models import Category, Comment, Post
-from blog.service import get_filter_posts, get_sorted_queryset, paginate_func
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -11,6 +6,11 @@ from django.core.mail import send_mail
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+
+from blog.constants import NUMBER_POSTS
+from blog.form import CommentForm, PostForm, RegistrationForm
+from blog.models import Category, Comment, Post
+from blog.service import get_filter_posts, paginate_func
 
 
 def index(request):
@@ -112,7 +112,7 @@ def profile(request, username):
     user_profile = get_object_or_404(User, username=username)
     not_user = request.user != user_profile
 
-    posts = get_sorted_queryset(user_profile, not_user)
+    posts = get_filter_posts(user_profile, include_unpublished=not_user)
 
     page_obj = paginate_func(request, posts, NUMBER_POSTS)
 
