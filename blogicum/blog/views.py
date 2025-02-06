@@ -1,8 +1,4 @@
 
-from blog.constants import NUMBER_POSTS
-from blog.form import CommentForm, PostForm, RegistrationForm
-from blog.models import Category, Comment, Post
-from blog.service import get_filter_posts, get_sorted_queryset, paginate_func
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -12,9 +8,14 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from blog.constants import NUMBER_POSTS
+from blog.form import CommentForm, PostForm, RegistrationForm
+from blog.models import Category, Comment, Post
+from blog.service import get_filter_posts, paginate_func
+
 
 def index(request):
-    posts = get_filter_posts()
+    posts = get_filter_posts(not_user=True)
 
     page_obj = paginate_func(request, posts, NUMBER_POSTS)
     context = {'page_obj': page_obj}
@@ -49,7 +50,7 @@ def category_posts(request, category_slug):
         is_published=True
     )
 
-    posts = get_filter_posts(category=category)
+    posts = get_filter_posts(category=category, not_user=True)
 
     page_obj = paginate_func(request, posts, NUMBER_POSTS)
 
@@ -112,7 +113,7 @@ def profile(request, username):
     user_profile = get_object_or_404(User, username=username)
     not_user = request.user != user_profile
 
-    posts = get_sorted_queryset(user_profile, not_user)
+    posts = get_filter_posts(author=user_profile, not_user=not_user)
 
     page_obj = paginate_func(request, posts, NUMBER_POSTS)
 

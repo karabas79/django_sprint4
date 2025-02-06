@@ -1,9 +1,10 @@
-from blog.constants import NUMBER_CHARACTERS
 from core.models import CreatedModel, PublishedModel
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+
+from blog.constants import NUMBER_CHARACTERS
 
 User = get_user_model()
 

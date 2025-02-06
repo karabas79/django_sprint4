@@ -9,7 +9,6 @@ import django.test.client
 import pytest
 import pytz
 from adapters.post import PostModelAdapter
-from blog.models import Post
 from conftest import (KeyVal, _TestModelAttrs,
                       get_create_a_post_get_response_safely,
                       get_get_response_safely)
@@ -27,6 +26,8 @@ from form.post.find_urls import find_edit_and_delete_urls
 from form.post.form_tester import PostFormTester
 from test_content import MainPostContentTester, main_content_tester
 from test_edit import _test_edit
+
+from blog.models import Post
 
 
 @pytest.mark.parametrize(
